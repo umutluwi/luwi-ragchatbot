@@ -8,6 +8,7 @@ interface Message {
   text: string
   sender: 'user' | 'bot'
   timestamp: Date
+  raw?: any // N8N raw response
 }
 
 export default function ChatPage() {
@@ -15,11 +16,25 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showWelcome, setShowWelcome] = useState(true)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [sessionId] = useState(`session_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`)
+  const [showDebug, setShowDebug] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // Check for saved theme preference or default to light mode
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
+    if (savedTheme) {
+      setTheme(savedTheme)
+      document.documentElement.setAttribute('data-theme', savedTheme)
+    } else {
+      // Default to light mode
+      setTheme('light')
+      document.documentElement.setAttribute('data-theme', 'light')
+    }
+
     setTimeout(() => {
-      addMessage('Merhaba! Ben Luwi RAG ChatBot. Vergi mevzuatları hakkında sorularınızı yanıtlayabilirim. Ne öğrenmek istiyorsunuz?', 'bot')
+      addMessage('Merhaba! Ben Luwi RAG ChatBot. Vergi mevzuatları hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?', 'bot')
     }, 1000)
   }, [])
 
@@ -27,12 +42,20 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
 
-  const addMessage = (text: string, sender: 'user' | 'bot') => {
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
+
+  const addMessage = (text: string, sender: 'user' | 'bot', raw?: any) => {
     const newMessage: Message = {
       id: Date.now().toString(),
       text,
       sender,
-      timestamp: new Date()
+      timestamp: new Date(),
+      raw
     }
     setMessages(prev => [...prev, newMessage])
     if (sender === 'user') {
@@ -43,14 +66,37 @@ export default function ChatPage() {
   const sendMessage = async () => {
     if (!inputValue.trim()) return
     
-    addMessage(inputValue, 'user')
+    const userMessage = inputValue
+    addMessage(userMessage, 'user')
     setInputValue('')
     setIsTyping(true)
     
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          session_id: sessionId
+        })
+      })
+
+      const data = await response.json()
+      
       setIsTyping(false)
-      addMessage('KDV oranları 2024 yılı için %1, %10 ve %20 olarak belirlenmiştir. Temel ihtiyaç maddelerinde %1, gıda ve kitap gibi ürünlerde %10, diğer mal ve hizmetlerde %20 uygulanır.', 'bot')
-    }, 1500)
+      addMessage(data.response || 'Yanıt alınamadı.', 'bot', data)
+      
+      if (showDebug) {
+        console.log('N8N Response:', data)
+      }
+      
+    } catch (error) {
+      setIsTyping(false)
+      addMessage('Bağlantı hatası! Lütfen daha sonra tekrar deneyin.', 'bot')
+      console.error('Chat error:', error)
+    }
   }
 
   const sendQuickMessage = (message: string) => {
@@ -66,71 +112,170 @@ export default function ChatPage() {
 
   return (
     <div>
-      {/* Floating Background Animation - MORE CUBES! */}
-      <div className="floating-bg">
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
+      {/* Theme Toggle Button */}
+      <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+        {theme === 'light' ? (
+          <svg className="moon-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        ) : (
+          <svg className="sun-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Debug Toggle */}
+      <button 
+        className="debug-toggle" 
+        onClick={() => setShowDebug(!showDebug)}
+        style={{
+          position: 'fixed',
+          bottom: 20,
+          right: 20,
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          background: showDebug ? '#10b981' : '#6b7280',
+          color: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        }}
+        title={showDebug ? 'Debug açık' : 'Debug kapalı'}
+      >
+        🐛
+      </button>
+
+      {/* Zen Cubes Background */}
+      <div className="zen-background">
+        {/* 3D Zen Cubes */}
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        
+        {/* Glow Effects */}
+        <div className="zen-glow"></div>
+        <div className="zen-glow"></div>
       </div>
 
       <div className="chat-container">
         <div className="chat-header">
-          <div className="company-logo">✨ Luwi RAG ChatBot</div>
+          <div className="company-logo">
+            <span className="zen-icon">◇</span>
+            Luwi RAG ChatBot
+          </div>
           <div className="status-indicator"></div>
         </div>
 
         <div className="chat-messages">
           {showWelcome && (
             <div className="welcome-message">
-              <div className="welcome-title">🎯 Vergi Mevzuatı RAG ChatBot'a Hoş Geldiniz</div>
-              <div className="welcome-subtitle">Vergi konularında sorularınızı sorun, size yardımcı olmaya hazırım!</div>
+              <div className="welcome-title">Vergi Mevzuatı Asistanınız</div>
+              <div className="welcome-subtitle">
+                Vergi konularında size yardımcı olmak için buradayım.<br/>
+                Aşağıdaki konulardan birini seçebilir veya kendi sorunuzu sorabilirsiniz.
+              </div>
               <div className="quick-actions">
                 <div className="quick-action" onClick={() => sendQuickMessage('KDV oranları nedir?')}>
-                  💰 KDV Oranları
+                  KDV Oranları
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Gelir vergisi dilimi nasıl hesaplanır?')}>
-                  📊 Gelir Vergisi
+                  Gelir Vergisi
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Kurumlar vergisi oranı kaçtır?')}>
-                  🏢 Kurumlar Vergisi
+                  Kurumlar Vergisi
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Damga vergisi ne zaman ödenir?')}>
-                  📋 Damga Vergisi
+                  Damga Vergisi
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Vergi beyannamesi nasıl verilir?')}>
-                  📝 Beyanname
+                  Beyanname
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('MTV tutarları güncel mi?')}>
-                  🚗 MTV
+                  MTV
                 </div>
               </div>
             </div>
           )}
 
           {messages.map(message => (
-            <div key={message.id} className={`message ${message.sender}`}>
-              <div className="message-avatar">
-                {message.sender === 'user' ? '👤' : '🤖'}
+            <div key={message.id}>
+              <div className={`message ${message.sender}`}>
+                <div className="message-avatar">
+                  {message.sender === 'user' ? '👤' : '🤖'}
+                </div>
+                <div className="message-content">
+                  {message.text}
+                </div>
               </div>
-              <div className="message-content">
-                {message.text}
-              </div>
+              {showDebug && message.raw && (
+                <div style={{
+                  marginLeft: message.sender === 'user' ? 'auto' : '52px',
+                  marginRight: message.sender === 'user' ? '52px' : 'auto',
+                  maxWidth: '70%',
+                  padding: '8px',
+                  background: 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: '8px',
+                  fontSize: '11px',
+                  marginTop: '4px',
+                  marginBottom: '8px',
+                  fontFamily: 'monospace',
+                  whiteSpace: 'pre-wrap',
+                  color: theme === 'dark' ? '#94a3b8' : '#64748b'
+                }}>
+                  📊 Debug: {JSON.stringify(message.raw, null, 2)}
+                </div>
+              )}
             </div>
           ))}
           
           {isTyping && (
             <div className="typing-indicator">
-              🤖 RAG ChatBot yazıyor
+              RAG ChatBot düşünüyor
               <span className="typing-dots">
-                <span></span>
-                <span></span>
                 <span></span>
                 <span></span>
                 <span></span>
@@ -149,7 +294,7 @@ export default function ChatPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="✍️ Mesajınızı yazın..."
+              placeholder="Sorunuzu yazın..."
             />
             <button className="send-button" onClick={sendMessage}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -165,17 +310,17 @@ export default function ChatPage() {
             <Image 
               src="/images/luwi-logo.png" 
               alt="Luwi Logo" 
-              width={24} 
-              height={24}
+              width={28} 
+              height={28}
               className="footer-logo-img"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
                 target.src = 'https://luwi.dev/images/luwi-logo.png'
               }}
             />
-            <div className="footer-company">🔥 Luwi Developments</div>
+            <div className="footer-company">Luwi Developments</div>
           </div>
-          <div className="footer-tagline">✨ DREAM · DESIGN · DEVELOP ✨</div>
+          <div className="footer-tagline">DREAM · DESIGN · DEVELOP</div>
         </div>
       </div>
     </div>
