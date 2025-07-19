@@ -19,7 +19,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     setTimeout(() => {
-      addMessage('Merhaba! Ben Luwi RAG ChatBot. Vergi mevzuatları hakkında sorularınızı yanıtlayabilirim. Ne öğrenmek istiyorsunuz?', 'bot')
+      addMessage('Merhaba! Ben Luwi RAG ChatBot. Vergi mevzuatları hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?', 'bot')
     }, 1000)
   }, [])
 
@@ -47,9 +47,19 @@ export default function ChatPage() {
     setInputValue('')
     setIsTyping(true)
     
+    // Simulated response for demo
     setTimeout(() => {
       setIsTyping(false)
-      addMessage('KDV oranları 2024 yılı için %1, %10 ve %20 olarak belirlenmiştir. Temel ihtiyaç maddelerinde %1, gıda ve kitap gibi ürünlerde %10, diğer mal ve hizmetlerde %20 uygulanır.', 'bot')
+      const responses = [
+        'KDV oranları 2024 yılı için %1, %10 ve %20 olarak belirlenmiştir. Temel ihtiyaç maddelerinde %1, gıda ve kitap gibi ürünlerde %10, diğer mal ve hizmetlerde %20 uygulanır.',
+        'Gelir vergisi, Türkiye\'de artan oranlı bir vergi sistemidir. 2024 yılı için gelir vergisi dilimleri güncellendi.',
+        'Kurumlar vergisi oranı 2024 yılı için %25 olarak uygulanmaktadır.',
+        'Damga vergisi, kağıtlar üzerinden alınan bir vergidir. Sözleşmeler, senetler ve resmi belgeler için uygulanır.',
+        'Motorlu Taşıtlar Vergisi (MTV) her yıl yeniden değerleme oranında güncellenir.',
+        'Vergi beyannameleri elektronik ortamda e-Beyanname sistemi üzerinden verilmektedir.'
+      ]
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)]
+      addMessage(randomResponse, 'bot')
     }, 1500)
   }
 
@@ -66,49 +76,90 @@ export default function ChatPage() {
 
   return (
     <div>
-      {/* Floating Background Animation - MORE CUBES! */}
-      <div className="floating-bg">
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
-        <div className="floating-cube"></div>
+      {/* Zen Cubes Background */}
+      <div className="zen-background">
+        {/* 3D Zen Cubes */}
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        <div className="zen-cube">
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+          <div className="zen-cube-face"></div>
+        </div>
+        
+        {/* Glow Effects */}
+        <div className="zen-glow"></div>
+        <div className="zen-glow"></div>
       </div>
 
       <div className="chat-container">
         <div className="chat-header">
-          <div className="company-logo">✨ Luwi RAG ChatBot</div>
+          <div className="company-logo">
+            <span className="zen-icon">◇</span>
+            Luwi RAG ChatBot
+          </div>
           <div className="status-indicator"></div>
         </div>
 
         <div className="chat-messages">
           {showWelcome && (
             <div className="welcome-message">
-              <div className="welcome-title">🎯 Vergi Mevzuatı RAG ChatBot'a Hoş Geldiniz</div>
-              <div className="welcome-subtitle">Vergi konularında sorularınızı sorun, size yardımcı olmaya hazırım!</div>
+              <div className="welcome-title">Vergi Mevzuatı Asistanınız</div>
+              <div className="welcome-subtitle">
+                Vergi konularında size yardımcı olmak için buradayım.<br/>
+                Aşağıdaki konulardan birini seçebilir veya kendi sorunuzu sorabilirsiniz.
+              </div>
               <div className="quick-actions">
                 <div className="quick-action" onClick={() => sendQuickMessage('KDV oranları nedir?')}>
-                  💰 KDV Oranları
+                  KDV Oranları
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Gelir vergisi dilimi nasıl hesaplanır?')}>
-                  📊 Gelir Vergisi
+                  Gelir Vergisi
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Kurumlar vergisi oranı kaçtır?')}>
-                  🏢 Kurumlar Vergisi
+                  Kurumlar Vergisi
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Damga vergisi ne zaman ödenir?')}>
-                  📋 Damga Vergisi
+                  Damga Vergisi
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('Vergi beyannamesi nasıl verilir?')}>
-                  📝 Beyanname
+                  Beyanname
                 </div>
                 <div className="quick-action" onClick={() => sendQuickMessage('MTV tutarları güncel mi?')}>
-                  🚗 MTV
+                  MTV
                 </div>
               </div>
             </div>
@@ -127,10 +178,8 @@ export default function ChatPage() {
           
           {isTyping && (
             <div className="typing-indicator">
-              🤖 RAG ChatBot yazıyor
+              RAG ChatBot düşünüyor
               <span className="typing-dots">
-                <span></span>
-                <span></span>
                 <span></span>
                 <span></span>
                 <span></span>
@@ -149,7 +198,7 @@ export default function ChatPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="✍️ Mesajınızı yazın..."
+              placeholder="Sorunuzu yazın..."
             />
             <button className="send-button" onClick={sendMessage}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -165,17 +214,17 @@ export default function ChatPage() {
             <Image 
               src="/images/luwi-logo.png" 
               alt="Luwi Logo" 
-              width={24} 
-              height={24}
+              width={28} 
+              height={28}
               className="footer-logo-img"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
                 target.src = 'https://luwi.dev/images/luwi-logo.png'
               }}
             />
-            <div className="footer-company">🔥 Luwi Developments</div>
+            <div className="footer-company">Luwi Developments</div>
           </div>
-          <div className="footer-tagline">✨ DREAM · DESIGN · DEVELOP ✨</div>
+          <div className="footer-tagline">DREAM · DESIGN · DEVELOP</div>
         </div>
       </div>
     </div>
