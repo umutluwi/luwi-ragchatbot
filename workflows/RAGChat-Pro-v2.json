@@ -1,0 +1,529 @@
+{
+  "name": "RAGChat Pro - v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ragchat-pro-v2",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, X-API-Key"
+              },
+              {
+                "name": "X-Content-Type-Options",
+                "value": "nosniff"
+              },
+              {
+                "name": "X-Frame-Options",
+                "value": "DENY"
+              },
+              {
+                "name": "X-RateLimit-Limit",
+                "value": "60"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e6796694-f07e-4985-ab32-6cb85250ea2c",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        -368
+      ],
+      "webhookId": "ragchat-pro-v2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.body.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "63b97d84-3f78-4206-96fc-aa2b1fb1ff30",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -368
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "Sen gelişmiş bir PostgreSQL RAG asistanısın. Türkiye vergi mevzuatı konusunda uzmanlaşmış bir yapay zeka asistanısın.\n\n## GÜVENLİK KURALLARI:\n- SQL injection koruması için parametreli sorgular kullan\n- Kullanıcı girdilerini doğrudan SQL'e ekleme\n- Her zaman LIMIT kullan (max 50)\n\n## VERİTABANI TABLOLARI:\n\n### 1. public.\"danistaykararlari\" - Danıştay Kararları\n- **Kaynak**: Kaynak bilgisi\n- **Daire**: Hangi daire tarafından verildiği\n- **Tarih**: Karar tarihi\n- **Konusu**: Kararın konusu\n- **Ozeti**: Karar özeti\n- **Icerik**: Tam metin (UZUN - sadece gerekli durumlarda kullan)\n\n### 2. public.\"sorucevap\" - Sık Sorulan Sorular\n- **Kaynak**: Kaynak bilgisi\n- **Soru**: Sorulan soru\n- **Cevap**: Verilen cevap\n\n### 3. public.\"ozelgeler\" - Vergi Özelgeleri\n- **Kaynak**: Kaynak bilgisi\n- **Daire**: İlgili vergi dairesi\n- **Tarih**: Özelge tarihi\n- **Konusu**: Özelge konusu\n- **Ozeti**: Özelge özeti\n- **Icerik**: Tam metin (UZUN - sadece gerekli durumlarda kullan)\n\n### 4. public.\"makaleler\" - Vergi Makaleleri\n- **Kaynak**: Kaynak bilgisi\n- **Baslik**: Makale başlığı\n- **Yazar**: Makale yazarı\n- **IlgiliKanun**: İlgili kanun maddesi\n- **Icerik**: Tam metin (UZUN - sadece gerekli durumlarda kullan)\n\n## ARAMA STRATEJİSİ:\n\n### 1. İlk Adım - Kapsamlı Arama\n**MUTLAKA** önce 'Search All Tables' tool'unu kullan:\n- Bu tool tüm 4 tabloyu tek sorguda arar\n- En hızlı ve kapsamlı sonuçları verir\n- Tarih bazlı sıralama yapar\n\n### 2. İkinci Adım - Semantic Arama\nEğer vector store varsa, semantic search yap:\n- Anlam bazlı benzer dokümanları bul\n- Özellikle karmaşık sorular için faydalı\n\n### 3. Üçüncü Adım - Detaylı Sorgular\nGerekirse spesifik SQL sorguları:\n- Tarih aralığı filtreleme\n- Daire bazlı arama\n- JOIN işlemleri\n- Agregasyon sorguları\n\n## SQL BEST PRACTICES:\n\n```sql\n-- Her zaman LOWER() kullan\nWHERE LOWER(column) LIKE LOWER('%search%')\n\n-- SQL injection koruması\nconst searchTerm = keyword.replace(/'/g, \"''\")\n\n-- Her sorgu için LIMIT\nLIMIT 5  -- veya LIMIT 10\n\n-- Tarih formatlama\nTO_CHAR(\"Tarih\", 'DD.MM.YYYY') as \"Tarih\"\n\n-- Uzun metinleri kısalt\nLEFT(\"Cevap\", 500) as \"Cevap_Ozet\"\n\n-- UNION ALL ile birleştir\nSELECT ... UNION ALL SELECT ...\n```\n\n## YANITLAMA KURALLARI:\n\n### 1. Kaynak Gösterimi\n- Her bilgi için mutlaka kaynak belirt\n- Format: **[Kaynak Tipi]** (Tarih) - Daire/Yazar\n\n### 2. Tarih Formatı\n- Tarihleri DD.MM.YYYY formatında göster\n- En güncel bilgileri önce listele\n\n### 3. Karşılaştırma\n- Birden fazla kaynak varsa karşılaştır\n- Farklılıkları ve benzerlikleri vurgula\n\n### 4. Özetleme\n- Uzun metinleri özetle\n- Ana noktaları madde madde listele\n- Teknik terimleri açıkla\n\n### 5. Yapılandırma\n```\n📋 KDV ORANLARI HAKKINDA BULUNAN KAYNAKLAR:\n\n1. 🏛️ **Danıştay 4. Daire Kararı** (15.03.2024)\n   - Konu: KDV oranlarının uygulanması\n   - Özet: [özet bilgisi]\n   \n2. 📄 **Gelir İdaresi Özelgesi** (20.02.2024)\n   - Konu: Özel matrah uygulaması\n   - Özet: [özet bilgisi]\n\n📊 KARŞILAŞTIRMA:\n- Ortak noktalar: [...]\n- Farklılıklar: [...]\n\n💡 SONUÇ:\n[Kendi yorumun ve sentezin]\n```\n\n## HATA YÖNETİMİ:\n\n- Eğer sonuç bulunamazsa: \"Aradığınız kriterlere uygun kayıt bulunamadı. Farklı anahtar kelimelerle tekrar deneyebilirsiniz.\"\n- Veritabanı hatası: \"Teknik bir sorun oluştu. Lütfen daha sonra tekrar deneyin.\"\n- Eksik parametre: \"Lütfen arama yapmak istediğiniz konuyu belirtin.\"",
+          "returnIntermediateSteps": true
+        }
+      },
+      "id": "fd4537f2-5498-4148-8401-c6fb62c65df3",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -272,
+        -624
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "frequencyPenalty": 0.1,
+          "maxTokens": 3000,
+          "presencePenalty": 0.1,
+          "temperature": 0.3,
+          "timeout": 60000,
+          "maxRetries": 3
+        }
+      },
+      "id": "4d88281f-0cb6-4c0c-9d64-d50331897b7a",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        -272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "dsXR6ZQEkeExDUVg",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.sessionId || 'default-session' }}",
+        "tableName": "chat_history",
+        "contextWindowLength": 15
+      },
+      "id": "8406faf3-b8b7-4b43-850d-53f4ddd8b22e",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        -32
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "fa1wVhQjetXydKdk",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "🔍 TÜM TABLOLARDA ARAMA - Bu tool'u MUTLAKA İLK ÖNCE kullan! Tüm 4 tabloyu tek sorguda arar. En hızlı ve kapsamlı sonuçları verir. GÜVENLİ SÜRÜM - Parametreli sorgular kullanır.",
+        "query": "WITH search_results AS (\n  -- Danıştay Kararları\n  SELECT \n    'Danıştay Kararı' as \"Tablo_Tipi\",\n    \"Kaynak\",\n    \"Daire\",\n    TO_CHAR(\"Tarih\", 'DD.MM.YYYY') as \"Tarih\",\n    \"Konusu\",\n    \"Ozeti\",\n    \"Tarih\" as \"Tarih_Ham\",\n    1 as priority\n  FROM public.\"danistaykararlari\" \n  WHERE \"Konusu\" ILIKE $1 \n     OR \"Ozeti\" ILIKE $1\n     OR \"Daire\" ILIKE $1\n  ORDER BY \"Tarih\" DESC\n  LIMIT $2\n  \n  UNION ALL\n  \n  -- Soru-Cevap\n  SELECT \n    'Soru-Cevap' as \"Tablo_Tipi\",\n    \"Kaynak\",\n    'Soru-Cevap' as \"Daire\",\n    NULL as \"Tarih\",\n    \"Soru\" as \"Konusu\",\n    LEFT(\"Cevap\", 500) as \"Ozeti\",\n    NULL as \"Tarih_Ham\",\n    3 as priority\n  FROM public.\"sorucevap\"\n  WHERE \"Soru\" ILIKE $1\n     OR \"Cevap\" ILIKE $1\n  LIMIT $2\n  \n  UNION ALL\n  \n  -- Özelgeler\n  SELECT \n    'Özelge' as \"Tablo_Tipi\",\n    \"Kaynak\",\n    \"Daire\",\n    TO_CHAR(\"Tarih\", 'DD.MM.YYYY') as \"Tarih\",\n    \"Konusu\",\n    \"Ozeti\",\n    \"Tarih\" as \"Tarih_Ham\",\n    2 as priority\n  FROM public.\"ozelgeler\"\n  WHERE \"Konusu\" ILIKE $1\n     OR \"Ozeti\" ILIKE $1\n     OR \"Daire\" ILIKE $1\n  ORDER BY \"Tarih\" DESC\n  LIMIT $2\n  \n  UNION ALL\n  \n  -- Makaleler\n  SELECT \n    'Makale' as \"Tablo_Tipi\",\n    \"Kaynak\",\n    \"Yazar\" as \"Daire\",\n    NULL as \"Tarih\",\n    \"Baslik\" as \"Konusu\",\n    COALESCE(\"IlgiliKanun\", 'İlgili kanun bilgisi belirtilmemiş') as \"Ozeti\",\n    NULL as \"Tarih_Ham\",\n    4 as priority\n  FROM public.\"makaleler\"\n  WHERE \"Baslik\" ILIKE $1\n     OR \"Yazar\" ILIKE $1\n     OR COALESCE(\"IlgiliKanun\", '') ILIKE $1\n  LIMIT $2\n)\nSELECT \n  \"Tablo_Tipi\",\n  \"Kaynak\",\n  \"Daire\",\n  \"Tarih\",\n  \"Konusu\",\n  \"Ozeti\"\nFROM search_results\nORDER BY \n  priority,\n  \"Tarih_Ham\" DESC NULLS LAST\nLIMIT $3;",
+        "options": {
+          "queryParams": [
+            "={{ '%' + $fromAI('keyword', 'Arama kelimesi').replace(/[%_]/g, '\\\\$&') + '%' }}",
+            "={{ Math.min($fromAI('limit', 5), 50) }}",
+            "={{ Math.min($fromAI('limit', 5) * 4, 200) }}"
+          ]
+        }
+      },
+      "id": "5437451f-e696-4660-abbc-3a215879e293",
+      "name": "Search All Tables",
+      "type": "@n8n/n8n-nodes-langchain.toolSql",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -272
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "fa1wVhQjetXydKdk",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "📝 Özel SQL sorgusu çalıştır. Detaylı aramalar, tarih filtreleme, JOIN işlemleri için kullan. DİKKAT: Sadece SELECT sorgularına izin verilir!",
+        "query": "={{ (function() {\n  const query = $fromAI('sql_query', 'Çalıştırılacak SQL sorgusu');\n  \n  // Güvenlik kontrolü - sadece SELECT sorgularına izin ver\n  if (!query.trim().toUpperCase().startsWith('SELECT')) {\n    throw new Error('Sadece SELECT sorguları çalıştırılabilir');\n  }\n  \n  // Tehlikeli komutları kontrol et\n  const dangerousKeywords = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'CREATE', 'ALTER', 'TRUNCATE'];\n  const upperQuery = query.toUpperCase();\n  \n  for (const keyword of dangerousKeywords) {\n    if (upperQuery.includes(keyword)) {\n      throw new Error(`Güvenlik: ${keyword} komutu kullanılamaz`);\n    }\n  }\n  \n  // LIMIT kontrolü\n  if (!upperQuery.includes('LIMIT')) {\n    return query + ' LIMIT 50';\n  }\n  \n  return query;\n})() }}",
+        "options": {}
+      },
+      "id": "78add710-4d6e-49ff-bd0c-4f377c829072",
+      "name": "Execute SQL Query",
+      "type": "@n8n/n8n-nodes-langchain.toolSql",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -272
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "fa1wVhQjetXydKdk",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "📊 Tablo yapısını ve kolonları görüntüle. Hangi tabloda hangi kolonlar var görmek için kullan.",
+        "query": "SELECT \n  c.table_name as \"Tablo\",\n  c.column_name as \"Kolon\",\n  c.data_type as \"Veri_Tipi\",\n  c.is_nullable as \"Null_Olabilir\",\n  c.column_default as \"Varsayilan\"\nFROM information_schema.columns c\nWHERE c.table_schema = 'public'\n  AND c.table_name = $1\nORDER BY c.ordinal_position;",
+        "options": {
+          "queryParams": [
+            "={{ $fromAI('table_name', 'Tablo adı (danistaykararlari, sorucevap, ozelgeler, makaleler)') }}"
+          ]
+        }
+      },
+      "id": "6f887879-b939-496a-b2db-85236ab75e2d",
+      "name": "Get Table Schema",
+      "type": "@n8n/n8n-nodes-langchain.toolSql",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -272
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "fa1wVhQjetXydKdk",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "id": "494d94cd-0047-4e9c-8b15-2540417307b8",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        128
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "dsXR6ZQEkeExDUVg",
+          "name": "OpenAi account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "📚 Semantic (anlamsal) arama. Kelimelerin anlamına göre benzer içerikleri bulur. Vector embeddings kullanır.",
+        "tableName": "document_vectors",
+        "topK": 10,
+        "options": {
+          "columnNames": {
+            "values": {
+              "contentColumnName": "content"
+            }
+          }
+        }
+      },
+      "id": "788f06aa-9ad6-4f8f-a83e-939ce8aaf112",
+      "name": "Postgres Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        -48
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "fa1wVhQjetXydKdk",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ \n  const response = {\n    \"success\": true,\n    \"sessionId\": $json.body?.sessionId || 'default-session',\n    \"message\": $json.body?.message,\n    \"response\": $json.output,\n    \"executionId\": $executionId,\n    \"timestamp\": new Date().toISOString(),\n    \"metadata\": {\n      \"model\": \"gpt-4o-mini\",\n      \"temperature\": 0.3,\n      \"contextWindowUsed\": $json.body?.sessionId ? true : false,\n      \"toolsAvailable\": [\n        \"search_all_tables\",\n        \"execute_sql_query\",\n        \"get_table_schema\",\n        \"vector_store_search\"\n      ],\n      \"webhookUrl\": \"https://n8n.luwi.dev/webhook/ragchat-pro-v2\"\n    }\n  };\n  \n  return JSON.stringify(response, null, 2);\n}}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              },
+              {
+                "name": "X-Execution-Id",
+                "value": "={{ $executionId }}"
+              },
+              {
+                "name": "X-Response-Time",
+                "value": "={{ Date.now() }}"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache, no-store, must-revalidate"
+              }
+            ]
+          }
+        }
+      },
+      "id": "0d284b14-4b45-45ec-9644-6684f02249a6",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        192,
+        -480
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ \n  JSON.stringify({\n    \"success\": false,\n    \"error\": \"Geçersiz istek. Lütfen 'message' parametresi gönderin.\",\n    \"details\": \"Request body must include 'message' field\",\n    \"example\": {\n      \"message\": \"KDV oranları nelerdir?\",\n      \"sessionId\": \"user-123\" \n    },\n    \"supportedQueries\": [\n      \"KDV oranları hakkında bilgi\",\n      \"Gelir vergisi dilimleri\",\n      \"Stopaj oranları\",\n      \"Kurumlar vergisi\",\n      \"Damga vergisi\",\n      \"ÖTV uygulaması\"\n    ],\n    \"timestamp\": new Date().toISOString(),\n    \"webhookUrl\": \"https://n8n.luwi.dev/webhook/ragchat-pro-v2\"\n  }, null, 2)\n}}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "2408a963-7a6e-4cb6-a569-148d33dfc73a",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -464,
+        -96
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LOGGING_WEBHOOK || 'https://monitoring.luwi.dev/n8n-logs' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  workflow: 'RAGChat Pro v2',\n  workflowId: $workflow.id,\n  executionId: $executionId,\n  timestamp: new Date().toISOString(),\n  duration: Date.now(),\n  input: {\n    message: $json.body?.message,\n    sessionId: $json.body?.sessionId\n  },\n  output: $json.output,\n  status: 'success',\n  environment: $env.NODE_ENV || 'production',\n  metadata: {\n    userAgent: $json.headers?.['user-agent'],\n    ip: $json.headers?.['x-forwarded-for'] || $json.headers?.['x-real-ip'],\n    toolsUsed: $json.intermediateSteps ? $json.intermediateSteps.length : 0\n  }\n}) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 10
+            }
+          },
+          "timeout": 5000
+        }
+      },
+      "id": "db03f40f-91f0-4242-a1b9-e1a0e255c4c2",
+      "name": "Log Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        -480
+      ],
+      "disabled": false,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Success": {
+      "main": [
+        [
+          {
+            "node": "Log Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search All Tables": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute SQL Query": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Table Schema": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  },
+  "versionId": "v2-secured",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f69b85ca791e27900bd0d1f282f9e43c2ea5176728cd3be407b9daf85629b5c"
+  },
+  "id": "ragchat-pro-v2",
+  "tags": ["production", "secured", "rag", "chatbot", "v2"]
+}

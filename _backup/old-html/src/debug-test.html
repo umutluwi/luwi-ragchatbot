@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG ChatBot Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 RAG ChatBot Debug Test</h1>
+        
+        <div class="status" id="status">Hazır</div>
+        
+        <h3>1. N8N Bağlantı Testi</h3>
+        <input type="text" id="webhookUrl" value="http://localhost:5678/webhook/ragchat-pro-v2" style="width: 400px;">
+        <button onclick="testWebhook()">Webhook Test Et</button>
+        
+        <h3>2. Mesaj Gönderme Testi</h3>
+        <input type="text" id="testMessage" value="KDV oranları nelerdir?" style="width: 300px;">
+        <button onclick="sendTestMessage()">Mesaj Gönder</button>
+        
+        <h3>3. Debug Logları</h3>
+        <button onclick="clearLogs()">Logları Temizle</button>
+        <div class="log" id="debugLog"></div>
+    </div>
+
+    <script>
+        let logElement = document.getElementById('debugLog');
+        let statusElement = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(message);
+        }
+
+        function setStatus(message, type = 'info') {
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function clearLogs() {
+            logElement.textContent = '';
+        }
+
+        async function testWebhook() {
+            const url = document.getElementById('webhookUrl').value;
+            
+            setStatus('Webhook test ediliyor...', 'info');
+            log('🔍 Webhook test başlatıldı');
+            log(`📍 URL: ${url}`);
+            
+            try {
+                // Basit GET isteği ile webhook'un mevcut olup olmadığını kontrol et
+                log('🚀 GET isteği gönderiliyor...');
+                
+                const response = await fetch(url, {
+                    method: 'GET'
+                });
+                
+                log(`📥 Response Status: ${response.status}`);
+                log(`📥 Response Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`);
+                
+                const responseText = await response.text();
+                log(`📄 Response Body: ${responseText}`);
+                
+                if (response.status === 200 || response.status === 405) {
+                    setStatus('Webhook ulaşılabilir', 'success');
+                } else {
+                    setStatus(`Webhook hatası: ${response.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Fetch Error: ${error.message}`);
+                setStatus('Webhook ulaşılamıyor', 'error');
+            }
+        }
+
+        async function sendTestMessage() {
+            const url = document.getElementById('webhookUrl').value;
+            const message = document.getElementById('testMessage').value;
+            
+            setStatus('Mesaj gönderiliyor...', 'info');
+            log('📤 POST isteği gönderiliyor...');
+            
+            const payload = {
+                message: message,
+                sessionId: 'debug_session_' + Date.now(),
+                timestamp: new Date().toISOString()
+            };
+            
+            log(`📦 Payload: ${JSON.stringify(payload, null, 2)}`);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                log(`📥 Response Status: ${response.status}`);
+                log(`📥 Response Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`);
+                
+                const responseText = await response.text();
+                log(`📄 Response Body (Raw): ${responseText}`);
+                
+                // JSON parse deneme
+                try {
+                    const jsonData = JSON.parse(responseText);
+                    log(`📊 Response JSON: ${JSON.stringify(jsonData, null, 2)}`);
+                    
+                    // Response'da AI yanıtını ara
+                    if (jsonData.response) {
+                        log(`🤖 AI Response: ${jsonData.response}`);
+                        setStatus('Mesaj başarıyla gönderildi ve yanıt alındı', 'success');
+                    } else if (jsonData.output) {
+                        log(`🤖 AI Output: ${jsonData.output}`);
+                        setStatus('Mesaj başarıyla gönderildi ve output alındı', 'success');
+                    } else {
+                        log('⚠️ Response\'ta AI yanıtı bulunamadı');
+                        setStatus('Yanıt alındı ama AI response yok', 'error');
+                    }
+                    
+                } catch (parseError) {
+                    log(`❌ JSON Parse Error: ${parseError.message}`);
+                    setStatus('Response JSON formatında değil', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Request Error: ${error.message}`);
+                setStatus('İstek gönderilemedi', 'error');
+            }
+        }
+
+        // Sayfa yüklendiğinde otomatik test
+        window.addEventListener('load', function() {
+            log('🚀 Debug sayfası yüklendi');
+            log('💡 İpucu: Önce webhook testi yapın, sonra mesaj gönderin');
+        });
+    </script>
+</body>
+</html>

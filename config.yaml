@@ -1,0 +1,54 @@
+# RAG Chatbot Configuration
+system:
+  name: "RAG Assistant"
+  version: "1.0.0"
+  environment: "production"
+
+# PostgreSQL Configuration
+database:
+  host: "localhost"
+  port: 5432
+  database: "rag_chatbot"
+  user: "postgres"
+  schema: "public"
+  
+# Vector Store Configuration
+vector_store:
+  type: "pgvector"
+  embedding_model: "text-embedding-ada-002"
+  embedding_dimension: 1536
+  similarity_threshold: 0.8
+  max_results: 5
+
+# n8n Webhook Configuration
+n8n:
+  base_url: "http://n8n.luwi.dev:5678"
+  webhook_path: "/webhook/rag-chatbot"
+  workflow_id: "2NhTSbSyaBRaSPqG"
+  
+# OpenAI Configuration  
+llm:
+  provider: "openai"
+  model: "gpt-4-turbo-preview"
+  temperature: 0.7
+  max_tokens: 1000
+  
+# Memory Configuration
+memory:
+  type: "conversation_buffer_window"
+  k: 10 # Keep last 10 messages
+  
+# Prompts
+prompts:
+  system_prompt: |
+    You are a helpful AI assistant with access to a knowledge base.
+    Use the provided context to answer questions accurately.
+    If you don't know something, say so honestly.
+    
+  rag_prompt: |
+    Context from knowledge base:
+    {context}
+    
+    User Question: {question}
+    
+    Please provide a comprehensive answer based on the context above.

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: rag_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rag_chatbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - rag_network
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: rag_n8n
+    environment:
+      - N8N_HOST=n8n.luwi.dev
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://n8n.luwi.dev:5678/
+      - N8N_ENCRYPTION_KEY=your-encryption-key
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - rag_network
+
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.nextjs
+    container_name: rag_frontend_nextjs
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://n8n.luwi.dev/webhook/rag-chatbot-pro
+    networks:
+      - rag_network
+
+  mcp-server:
+    build: ./mcp-server
+    container_name: rag_mcp_server
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/rag_chatbot
+      - N8N_API_URL=http://n8n:5678
+      - N8N_API_KEY=${N8N_API_KEY}
+    volumes:
+      - ./config:/app/config
+    networks:
+      - rag_network
+
+volumes:
+  postgres_data:
+  n8n_data:
+
+networks:
+  rag_network:
+    driver: bridge

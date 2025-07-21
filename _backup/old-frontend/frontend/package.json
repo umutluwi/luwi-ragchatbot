@@ -1,0 +1,18 @@
+{
+  "name": "luwi-rag-chatbot-frontend",
+  "version": "1.0.0",
+  "description": "Luwi RAG ChatBot Frontend - Vergi Mevzuatı Uzmanı",
+  "main": "index.html",
+  "scripts": {
+    "start": "live-server --port=3000 --host=localhost",
+    "dev": "live-server --port=3000 --host=localhost --watch=.",
+    "serve": "http-server -p 3000 -c-1"
+  },
+  "keywords": ["chatbot", "rag", "luwi", "vergi", "mevzuat"],
+  "author": "Luwi Developments",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "http-server": "^14.1.1"
+  }
+}

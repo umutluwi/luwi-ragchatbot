@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luwi RAG ChatBot - Fixed</title>
+    <style>
+        /* Reset ve base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Ana container - fixed boyutlar */
+        .chat-container {
+            width: 800px;
+            height: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-rows: auto 1fr auto auto auto;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header - sabit yükseklik */
+        .chat-header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            grid-row: 1;
+        }
+
+        .company-logo {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            background: #2ecc71;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.offline {
+            background: #e74c3c;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .connection-status {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        /* Messages area - flexible */
+        .chat-messages {
+            background: #f8f9fa;
+            padding: 20px;
+            overflow-y: auto;
+            grid-row: 2;
+            position: relative;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            min-width: 100px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e1e8ed;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(15, 52, 96, 0.1);
+        }
+
+        .message-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: white;
+            order: 2;
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+        }
+
+        /* Typing indicator - sabit */
+        .typing-indicator {
+            display: none;
+            padding: 10px 16px;
+            font-style: italic;
+            color: #666;
+            font-size: 12px;
+            grid-row: 3;
+            background: #f8f9fa;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots span {
+            animation: typing 1.4s infinite;
+            margin: 0 1px;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        /* Input container - sabit yükseklik */
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e1e8ed;
+            grid-row: 4;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #0f3460;
+            box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.1);
+        }
+
+        .send-button {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(15, 52, 96, 0.3);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Footer - sabit yükseklik */
+        .chat-footer {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+            grid-row: 5;
+        }
+
+        .footer-logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .footer-company {
+            font-weight: 500;
+            letter-spacing: 1px;
+            font-size: 13px;
+        }
+
+        .footer-tagline {
+            opacity: 0.8;
+            font-weight: 300;
+            letter-spacing: 2px;
+            font-size: 10px;
+        }
+
+        /* Welcome message */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .welcome-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #1a1a2e;
+            font-weight: 300;
+        }
+
+        .welcome-subtitle {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: #666;
+            font-weight: 300;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .quick-action {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .quick-action:hover {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 52, 96, 0.2);
+        }
+
+        /* Error messages */
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+            font-size: 12px;
+        }
+
+        /* Debug panel */
+        .debug-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-family: monospace;
+            display: none;
+            z-index: 1000;
+        }
+
+        .debug-panel.show {
+            display: block;
+        }
+
+        /* Responsive - tablet */
+        @media (max-width: 900px) {
+            .chat-container {
+                width: 90vw;
+                height: 80vh;
+            }
+        }
+
+        /* Responsive - mobile */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .chat-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+            
+            .message-content {
+                max-width: 85%;
+                font-size: 13px;
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .quick-action {
+                width: 80%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debugPanel">
+            <div>Status: <span id="debugStatus">Initializing</span></div>
+            <div>URL: <span id="debugUrl">-</span></div>
+            <div>Last Response: <span id="debugResponse">-</span></div>
+        </div>
+
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="company-logo">✨ Luwi RAG ChatBot</div>
+            <div class="status-indicator" id="statusIndicator"></div>
+            <div class="connection-status" id="connectionStatus">Başlatılıyor...</div>
+        </div>
+
+        <!-- Messages -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message" id="welcomeMessage">
+                <div class="welcome-title">Luwi RAG ChatBot'a Hoş Geldiniz</div>
+                <div class="welcome-subtitle">Türkiye vergi mevzuatı hakkında sorularınızı sorun!</div>
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="sendQuickMessage('KDV oranları nelerdir?')">KDV Oranları</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Gelir vergisi dilimleri nedir?')">Gelir Vergisi</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Stopaj oranları hakkında bilgi ver')">Stopaj Oranları</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Kurumlar vergisi oranı kaçtır?')">Kurumlar Vergisi</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+            RAG ChatBot yazıyor<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Vergi mevzuatı hakkında sorunuzu yazın..." maxlength="500">
+                <button class="send-button" id="sendButton" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="chat-footer">
+            <div class="footer-logo-container">
+                <div class="footer-company">Luwi Developments</div>
+            </div>
+            <div class="footer-tagline">DREAM · DESIGN · DEVELOP</div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const sendButton = document.getElementById('sendButton');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        
+        // Debug elements
+        const debugPanel = document.getElementById('debugPanel');
+        const debugStatus = document.getElementById('debugStatus');
+        const debugUrl = document.getElementById('debugUrl');
+        const debugResponse = document.getElementById('debugResponse');
+
+        // Configuration
+        const WEBHOOK_URL = 'http://localhost:5678/webhook/ragchat-pro-v2';
+        let isProcessing = false;
+        let sessionId = generateSessionId();
+        let debugMode = false;
+
+        // Debug function
+        function toggleDebug() {
+            debugMode = !debugMode;
+            debugPanel.classList.toggle('show', debugMode);
+            debugUrl.textContent = WEBHOOK_URL;
+        }
+
+        function updateDebugStatus(status) {
+            debugStatus.textContent = status;
+        }
+
+        function updateDebugResponse(response) {
+            debugResponse.textContent = JSON.stringify(response).substring(0, 50) + '...';
+        }
+
+        // Event listeners
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !isProcessing) {
+                sendMessage();
+            }
+        });
+
+        // Triple click on logo to enable debug
+        document.querySelector('.company-logo').addEventListener('click', function(e) {
+            if (e.detail === 3) {
+                toggleDebug();
+            }
+        });
+
+        // Initialize
+        window.addEventListener('load', function() {
+            updateDebugStatus('Loading');
+            testConnection();
+            setTimeout(() => {
+                addMessage('Merhaba! Ben Luwi RAG ChatBot. Türkiye vergi mevzuatı hakkında sorularınızı yanıtlayabilirim. Başlamak için bir soru sorun!', 'bot');
+            }, 1000);
+        });
+
+        async function testConnection() {
+            updateDebugStatus('Testing connection');
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: 'connection test',
+                        sessionId: sessionId
+                    })
+                });
+
+                if (response.ok || response.status === 400) {
+                    setConnectionStatus(true, 'Bağlandı');
+                    updateDebugStatus('Connected');
+                } else {
+                    setConnectionStatus(false, `Hata: ${response.status}`);
+                    updateDebugStatus(`Error: ${response.status}`);
+                }
+            } catch (error) {
+                setConnectionStatus(false, 'Bağlantı yok');
+                updateDebugStatus('Connection failed');
+                console.error('Connection test failed:', error);
+            }
+        }
+
+        function setConnectionStatus(isOnline, message) {
+            if (isOnline) {
+                statusIndicator.classList.remove('offline');
+                connectionStatus.textContent = message;
+            } else {
+                statusIndicator.classList.add('offline');
+                connectionStatus.textContent = message;
+            }
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message || isProcessing) return;
+
+            addMessage(message, 'user');
+            chatInput.value = '';
+            setLoadingState(true);
+            updateDebugStatus('Sending message');
+
+            try {
+                const payload = {
+                    message: message,
+                    sessionId: sessionId,
+                    timestamp: new Date().toISOString()
+                };
+
+                console.log('📤 Sending:', payload);
+
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                console.log('📥 Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('📥 Response data:', data);
+                updateDebugResponse(data);
+
+                // Parse response
+                let botResponse = 'Yanıt alınamadı';
+                if (data && data.success && data.response) {
+                    botResponse = data.response;
+                } else if (data && data.output) {
+                    botResponse = data.output;
+                } else if (typeof data === 'string') {
+                    botResponse = data;
+                }
+
+                addMessage(botResponse, 'bot');
+                setConnectionStatus(true, 'Aktif');
+                updateDebugStatus('Message sent successfully');
+
+            } catch (error) {
+                console.error('❌ Send error:', error);
+                addErrorMessage(`Hata: ${error.message}`);
+                setConnectionStatus(false, 'Hata');
+                updateDebugStatus(`Send error: ${error.message}`);
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function sendQuickMessage(message) {
+            if (isProcessing) return;
+            chatInput.value = message;
+            sendMessage();
+        }
+
+        function addMessage(text, sender) {
+            if (welcomeMessage.style.display !== 'none') {
+                welcomeMessage.style.display = 'none';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? 'S' : 'L';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addErrorMessage(text) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = text;
+            chatMessages.appendChild(errorDiv);
+            scrollToBottom();
+        }
+
+        function setLoadingState(loading) {
+            isProcessing = loading;
+            sendButton.disabled = loading;
+            chatInput.disabled = loading;
+            
+            if (loading) {
+                typingIndicator.style.display = 'block';
+            } else {
+                typingIndicator.style.display = 'none';
+            }
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        }
+
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Global debug function
+        window.testRAG = async function() {
+            console.log('🔧 RAG Test başlatılıyor...');
+            
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: 'Test mesajı',
+                        sessionId: sessionId
+                    })
+                });
+                
+                console.log('Status:', response.status);
+                const data = await response.json();
+                console.log('Data:', data);
+                
+                return data;
+                
+            } catch (error) {
+                console.error('Test hatası:', error);
+                return null;
+            }
+        };
+    </script>
+</body>
+</html>

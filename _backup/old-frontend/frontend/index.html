@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luwi RAG ChatBot - AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .company-logo {
+            font-size: 24px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            background: #2ecc71;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e1e8ed;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(15, 52, 96, 0.1);
+        }
+
+        .message-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: white;
+            order: 2;
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e1e8ed;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e1e8ed;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #0f3460;
+            box-shadow: 0 0 0 3px rgba(15, 52, 96, 0.1);
+        }
+
+        .send-button {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(15, 52, 96, 0.3);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 16px;
+            font-style: italic;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .typing-dots {
+            display: inline-block;
+        }
+
+        .typing-dots span {
+            animation: typing 1.4s infinite;
+            margin: 0 1px;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .welcome-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #1a1a2e;
+            font-weight: 300;
+        }
+
+        .welcome-subtitle {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: #666;
+            font-weight: 300;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .quick-action {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #e1e8ed;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .quick-action:hover {
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(15, 52, 96, 0.2);
+        }
+
+        .chat-footer {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+            position: relative;
+        }
+
+        .footer-logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .footer-logo-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.3));
+            animation: logoGlow 3s ease-in-out infinite alternate;
+            transition: all 0.3s ease;
+        }
+
+        .footer-logo-img:hover {
+            transform: scale(1.1) rotate(5deg);
+            filter: brightness(0) invert(1) drop-shadow(0 0 12px rgba(255,255,255,0.6));
+        }
+
+        @keyframes logoGlow {
+            0% {
+                filter: brightness(0) invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.3));
+            }
+            100% {
+                filter: brightness(0) invert(1) drop-shadow(0 0 16px rgba(255,255,255,0.5));
+            }
+        }
+
+        .footer-company {
+            font-weight: 500;
+            letter-spacing: 1px;
+            font-size: 13px;
+            background: linear-gradient(45deg, #ffffff, #e3e3e3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 2s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% center;
+            }
+            100% {
+                background-position: 200% center;
+            }
+        }
+
+        .footer-tagline {
+            opacity: 0.8;
+            font-weight: 300;
+            letter-spacing: 2px;
+            font-size: 10px;
+            margin-top: 4px;
+            animation: fadeInOut 4s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        /* Logo yükleme fallback */
+        .footer-logo-img:not([src]) {
+            display: none;
+        }
+
+        /* Logo yüklenene kadar placeholder */
+        .footer-logo-container::before {
+            content: "🔥";
+            font-size: 24px;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Logo yüklendikten sonra placeholder'ı gizle */
+        .footer-logo-container:has(.footer-logo-img[src])::before {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="company-logo">Luwi RAG ChatBot</div>
+            <div class="status-indicator"></div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <div class="welcome-title">Vergi Mevzuatı RAG ChatBot'a Hoş Geldiniz</div>
+                <div class="welcome-subtitle">Vergi konularında sorularınızı sorun, size yardımcı olmaya hazırım!</div>
+                <div class="quick-actions">
+                    <div class="quick-action" onclick="sendQuickMessage('KDV oranları nedir?')">KDV Oranları</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Gelir vergisi dilimi nasıl hesaplanır?')">Gelir Vergisi</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Kurumlar vergisi oranı kaçtır?')">Kurumlar Vergisi</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Damga vergisi ne zaman ödenir?')">Damga Vergisi</div>
+                    <div class="quick-action" onclick="sendQuickMessage('Vergi beyannamesi nasıl verilir?')">Beyanname</div>
+                    <div class="quick-action" onclick="sendQuickMessage('MTV tutarları güncel mi?')">MTV</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            RAG ChatBot yazıyor<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Mesajınızı yazın..." maxlength="500">
+                <button class="send-button" onclick="sendMessage()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="chat-footer">
+            <div class="footer-logo-container">
+                <img src="../public/images/luwi-logo.png" alt="Luwi Logo" class="footer-logo-img" 
+                     onerror="this.src='https://luwi.dev/images/luwi-logo.png'">
+                <div class="footer-company">Luwi Developments</div>
+            </div>
+            <div class="footer-tagline">DREAM · DESIGN · DEVELOP</div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // Session ID oluştur/al
+        function getSessionId() {
+            let sessionId = localStorage.getItem('rag_chatbot_session');
+            if (!sessionId) {
+                sessionId = 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                localStorage.setItem('rag_chatbot_session', sessionId);
+            }
+            return sessionId;
+        }
+
+        // Vergi mevzuatı RAG ChatBot yanıtları
+        const botResponses = [
+            "KDV oranları 2024 yılı için %1, %10 ve %20 olarak belirlenmiştir. Temel ihtiyaç maddelerinde %1, gıda ve kitap gibi ürünlerde %10, diğer mal ve hizmetlerde %20 uygulanır.",
+            "Gelir vergisi dilimleri 2024 için: 70.000 TL'ye kadar %15, 70.000-180.000 TL arası %20, 180.000-500.000 TL arası %27, 500.000 TL üzeri %35 oranında uygulanır.",
+            "Kurumlar vergisi oranı 2024 yılı için %25'tir. Ancak bankalar ve finansal kuruluşlar için farklı oranlar uygulanabilir. Küçük işletmeler için indirimli oranlar mevcuttur.",
+            "Damga vergisi, belge ve kağıtların düzenlenmesi sırasında ödenir. 2024 minimum damga vergisi tutarı 52 TL'dir. Sözleşmeler, makbuzlar ve çeşitli belgeler damga vergisine tabidir.",
+            "Vergi beyannameleri e-Beyanname sistemi üzerinden verilebilir. Gelir vergisi beyannamesi Mart ayında, kurumlar vergisi beyannamesi ise dördüncü ayın sonuna kadar verilir.",
+            "2024 MTV tutarları araç cinsi ve motor hacmine göre değişir. Özel otomobiller için 1.362 TL ile 34.040 TL arasında değişen tutarlar uygulanır."
+        ];
+
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Kullanıcı mesajını ekle
+            addMessage(message, 'user');
+            chatInput.value = '';
+
+            // Yazıyor göstergesini göster
+            showTypingIndicator();
+
+            try {
+                // N8N Webhook'a gerçek API çağrısı
+                const response = await fetch('http://localhost:5678/webhook/ragchat-pro-v2', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        timestamp: new Date().toISOString(),
+                        session_id: getSessionId()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                hideTypingIndicator();
+                
+                // N8N'den gelen yanıtı göster
+                const botResponse = data.response || data.message || 'Üzgünüm, bir hata oluştu.';
+                addMessage(botResponse, 'bot');
+                
+            } catch (error) {
+                console.error('Webhook error:', error);
+                hideTypingIndicator();
+                
+                // Hata durumunda fallback yanıt
+                const fallbackResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
+                addMessage('⚠️ Bağlantı sorunu: ' + fallbackResponse, 'bot');
+            }
+        }
+
+        function sendQuickMessage(message) {
+            chatInput.value = message;
+            sendMessage();
+        }
+
+        function addMessage(text, sender) {
+            // Hoş geldin mesajını gizle
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.style.display = 'none';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? 'S' : 'L';
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        // Başlangıç mesajı
+        setTimeout(() => {
+            addMessage('Merhaba! Ben Luwi RAG ChatBot. Vergi mevzuatları hakkında sorularınızı yanıtlayabilirim. Ne öğrenmek istiyorsunuz?', 'bot');
+        }, 1000);
+    </script>
+</body>
+</html>
