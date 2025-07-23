@@ -318,7 +318,7 @@ body {
   background: var(--header-bg);
   color: var(--text-primary);
   padding: 16px 24px;
-  text-align: center;
+  text-align: left;
   position: relative;
   border-bottom: 1px solid var(--border-primary);
   backdrop-filter: blur(10px);
@@ -333,7 +333,7 @@ body {
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   transition: color 0.3s ease;
 }
@@ -362,7 +362,8 @@ body {
 
 .status-indicator {
   position: absolute;
-  top: 28px;
+  top: 50%;
+  transform: translateY(-50%);
   right: 28px;
   width: 8px;
   height: 8px;
@@ -680,30 +681,7 @@ body {
   transition: color 0.3s ease;
 }
 
-/* Global Footer for Mobile - Fixed positioning */
-footer {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: var(--footer-height) !important;
-  background-color: #f8f9fa !important;
-  color: #6b7280 !important;
-  font-size: 0.75rem !important;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1) !important;
-  border-top: 1px solid #e5e7eb !important;
-  display: none !important; /* Hidden on desktop */
-  align-items: center !important;
-  justify-content: center !important;
-  z-index: 50 !important;
-  backdrop-filter: blur(10px) !important;
-}
-
-[data-theme="dark"] footer {
-  background-color: rgba(31, 41, 55, 0.95) !important;
-  color: #9ca3af !important;
-  border-top-color: rgba(75, 85, 99, 0.5) !important;
-}
+/* Remove global footer - using the chat-footer instead */
 
 /* Message Bubbles Hover Effect */
 .message-content:hover {
@@ -721,9 +699,6 @@ footer {
 
 /* Mobile First Responsive Design */
 @media (max-width: 768px) {
-  :root {
-    --footer-height: 60px;
-  }
 
   body {
     padding: 0;
@@ -734,26 +709,21 @@ footer {
   }
 
   .min-h-screen {
-    padding-bottom: var(--footer-height);
+    padding-bottom: 0;
   }
 
   .chat-container {
     width: 100vw;
-    height: calc(100vh - var(--footer-height));
+    height: 100vh;
     margin: 0;
     border-radius: 0;
     max-width: none;
     min-width: auto;
     padding: 0;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Show footer on mobile */
-  footer {
-    display: flex !important;
-    height: var(--footer-height) !important;
-    padding: 12px 16px !important;
-    font-size: 0.7rem !important;
-  }
   
   .theme-toggle {
     top: 15px;
@@ -769,14 +739,15 @@ footer {
   }
   
   .chat-header {
-    padding: 12px 16px;
-    text-align: center;
+    padding: 16px;
+    text-align: left;
+    margin-top: 0;
   }
   
   .company-logo {
     font-size: 20px;
     gap: 10px;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .header-logo {
@@ -791,7 +762,8 @@ footer {
   }
 
   .status-indicator {
-    top: 20px;
+    top: 50%;
+    transform: translateY(-50%);
     right: 70px;
     width: 6px;
     height: 6px;
@@ -880,9 +852,38 @@ footer {
     border-radius: 12px;
   }
   
-  /* Hide desktop footer on mobile */
+  /* Desktop footer remains visible on mobile */
   .chat-footer {
-    display: none;
+    background: var(--bg-tertiary);
+    color: var(--text-tertiary);
+    padding: 12px 16px;
+    text-align: center;
+    border-top: 1px solid var(--border-primary);
+    font-size: 11px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+  
+  .footer-logo-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  
+  .footer-logo {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .footer-company {
+    font-size: 12px;
+  }
+  
+  .footer-tagline {
+    font-size: 10px;
   }
 
   /* Floating blobs mobile optimization */
@@ -989,19 +990,12 @@ footer {
     height: 40px;
   }
 
-  footer {
-    font-size: 0.65rem !important;
-  }
 }
 
 /* Landscape phone optimization */
 @media (max-width: 768px) and (orientation: landscape) {
-  :root {
-    --footer-height: 50px;
-  }
-
   .chat-container {
-    height: calc(100vh - var(--footer-height));
+    height: 100vh;
   }
   
   .chat-header {
@@ -1105,8 +1099,4 @@ footer {
     height: 16px;
   }
 
-  footer {
-    font-size: 0.6rem !important;
-    padding: 8px 12px !important;
-  }
 }
